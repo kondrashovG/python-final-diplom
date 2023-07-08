@@ -96,8 +96,7 @@ class Shop(models.Model):
     #                             blank=True, null=True,
     #                             on_delete=models.CASCADE)
     # state = models.BooleanField(verbose_name='статус получения заказов', default=True)
-
-    # filename
+    filename = models.FileField()
 
     class Meta:
         verbose_name = 'Магазин'
