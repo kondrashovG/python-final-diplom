@@ -5,7 +5,8 @@ from django.core.exceptions import ValidationError
 from requests import get
 from yaml import load as load_yaml, Loader
 
-from orders.orders.models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter
+from orders.models import Shop, Category, ProductInfo, Product, Parameter, ProductParameter
+from orders.settings import MEDIA_ROOT
 
 
 class PartnerUpdate(APIView):
@@ -13,25 +14,27 @@ class PartnerUpdate(APIView):
     Класс для обновления прайса от поставщика
     """
     def post(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+        # if not request.user.is_authenticated:
+        #     return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
 
-        if request.user.type != 'shop':
-            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+        # if request.user.type != 'shop':
+        #     return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
 
-        url = request.data.get('url')
-        if url:
-            validate_url = URLValidator()
-            try:
-                validate_url(url)
-            except ValidationError as e:
-                return JsonResponse({'Status': False, 'Error': str(e)})
-            else:
-                stream = get(url).content
+        # Load YAML data from the file
+        fn = request.data.get('filename')
+        with open(f'{MEDIA_ROOT}{fn}', encoding='UTF-8') as fh:
+                data = load_yaml(fh, Loader=Loader)
+        # if url:
+        #     validate_url = URLValidator()
+        #     try:
+        #         validate_url(url)
+        #     except ValidationError as e:
+        #         return JsonResponse({'Status': False, 'Error': str(e)})
+        #     else:
+        #         stream = get(url).content
 
-                data = load_yaml(stream, Loader=Loader)
 
-                shop, _ = Shop.objects.get_or_create(name=data['shop'], user_id=request.user.id)
+                shop, _ = Shop.objects.get_or_create(name=data['shop'])
                 for category in data['categories']:
                     category_object, _ = Category.objects.get_or_create(id=category['id'], name=category['name'])
                     category_object.shops.add(shop.id)

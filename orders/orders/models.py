@@ -78,6 +78,7 @@ class User(AbstractUser):
             'Unselect this instead of deleting accounts.'
         ),
     )
+
     # type = models.CharField(verbose_name='Тип пользователя', choices=USER_TYPE_CHOICES, max_length=5, default='buyer')
 
     def __str__(self):
@@ -91,12 +92,13 @@ class User(AbstractUser):
 
 class Shop(models.Model):
     name = models.CharField(max_length=50, verbose_name='Название', unique=True)
-    url = models.URLField(verbose_name='Ссылка', unique=True)
+    # url = models.URLField(verbose_name='Ссылка', unique=True)
     # user = models.OneToOneField(User, verbose_name='Пользователь',
     #                             blank=True, null=True,
     #                             on_delete=models.CASCADE)
     # state = models.BooleanField(verbose_name='статус получения заказов', default=True)
-    filename = models.FileField()
+    # file will be saved to MEDIA_ROOT/data
+    filename = models.CharField(max_length=50, verbose_name='Файл для загрузки товаров')
 
     class Meta:
         verbose_name = 'Магазин'
@@ -129,7 +131,7 @@ class Product(models.Model):
         verbose_name = 'Продукт'
         verbose_name_plural = "Список продуктов"
         ordering = ('-name',)
-        constraints =[models.UniqueConstraint(fields=['name', 'category'], name='unique_product'),]
+        constraints = [models.UniqueConstraint(fields=['name', 'category'], name='unique_product'), ]
 
 
 class ProductInfo(models.Model):
@@ -182,7 +184,6 @@ class Order(models.Model):
                              on_delete=models.CASCADE)
     dt = models.DateTimeField(auto_now_add=True)
     status = models.CharField(verbose_name='Статус', choices=STATUS_CHOICES, max_length=15)
-
 
     class Meta:
         verbose_name = 'Заказ'
