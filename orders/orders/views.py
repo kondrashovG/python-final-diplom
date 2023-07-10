@@ -22,7 +22,7 @@ class PartnerUpdate(APIView):
 
         # Load YAML data from the file
         fn = request.data.get('filename')
-        with open(f'{MEDIA_ROOT}{fn}', encoding='UTF-8') as fh:
+        with open(f'{MEDIA_ROOT}{fn}.yaml', encoding='UTF-8') as fh:
                 data = load_yaml(fh, Loader=Loader)
         # if url:
         #     validate_url = URLValidator()
@@ -42,10 +42,9 @@ class PartnerUpdate(APIView):
                 ProductInfo.objects.filter(shop_id=shop.id).delete()
                 for item in data['goods']:
                     product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
-
                     product_info = ProductInfo.objects.create(product_id=product.id,
-                                                              external_id=item['id'],
-                                                              model=item['model'],
+                                                              id=item['id'],
+                                                              # model=item['model'],
                                                               price=item['price'],
                                                               price_rrc=item['price_rrc'],
                                                               quantity=item['quantity'],
