@@ -103,19 +103,20 @@ class PartnerUpdate(APIView):
                     category_object.shops.add(shop.id)
                     category_object.save()
                 ProductInfo.objects.filter(shop_id=shop.id).delete()
-                for item in data['goods']:
-                    product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
-                    product_info = ProductInfo.objects.create(product_id=product.id,
-                                                              id=item['id'],
-                                                              # model=item['model'],
-                                                              price=item['price'],
-                                                              price_rrc=item['price_rrc'],
-                                                              quantity=item['quantity'],
-                                                              shop_id=shop.id)
-                    for name, value in item['parameters'].items():
-                        parameter_object, _ = Parameter.objects.get_or_create(name=name)
-                        ProductParameter.objects.create(product_info_id=product_info.id,
-                                                        parameter_id=parameter_object.id,
-                                                        value=value)
+                if 'goods' in data:
+                    for item in data['goods']:
+                        product, _ = Product.objects.get_or_create(name=item['name'], category_id=item['category'])
+                        product_info = ProductInfo.objects.create(product_id=product.id,
+                                                                  id=item['id'],
+                                                                  # model=item['model'],
+                                                                  price=item['price'],
+                                                                  price_rrc=item['price_rrc'],
+                                                                  quantity=item['quantity'],
+                                                                  shop_id=shop.id)
+                        for name, value in item['parameters'].items():
+                            parameter_object, _ = Parameter.objects.get_or_create(name=name)
+                            ProductParameter.objects.create(product_info_id=product_info.id,
+                                                            parameter_id=parameter_object.id,
+                                                            value=value)
                 return JsonResponse({'Status': True})
         return JsonResponse({'Status': False, 'Errors': 'Не указано имя файла'})

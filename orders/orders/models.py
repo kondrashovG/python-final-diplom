@@ -92,7 +92,7 @@ class User(AbstractUser):
 
 class Shop(models.Model):
     name = models.CharField(max_length=50, verbose_name='Название', unique=True)
-    # url = models.URLField(verbose_name='Ссылка', unique=True)
+    url = models.URLField(verbose_name='Ссылка', unique=True)
     # user = models.OneToOneField(User, verbose_name='Пользователь',
     #                             blank=True, null=True,
     #                             on_delete=models.CASCADE)
@@ -168,7 +168,7 @@ class ProductParameter(models.Model):
                                      related_name='product_parameters', on_delete=models.CASCADE)
     parameter = models.ForeignKey(Parameter, verbose_name='Параметр',
                                   related_name='product_parameters', on_delete=models.CASCADE)
-    value = models.CharField(verbose_name='Значение', max_length=100)
+    value = models.CharField(verbose_name='Значение', max_length=222)
 
     class Meta:
         verbose_name = 'Параметр'
