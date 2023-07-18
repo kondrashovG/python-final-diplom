@@ -219,7 +219,7 @@ class BasketView(APIView):
             except ValueError:
                 return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
             else:
-                basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+                basket = Order.objects.get_or_create(user_id=request.user.id, state='basket')[0]
                 objects_created = 0
                 for order_item in items_dict:
                     order_item.update({'order': basket.id})
@@ -247,7 +247,7 @@ class BasketView(APIView):
         items_sting = request.data.get('items')
         if items_sting:
             items_list = items_sting.split(',')
-            basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+            basket = Order.objects.get_or_create(user_id=request.user.id, state='basket')[0]
             query = Q()
             objects_deleted = False
             print(items_list)
@@ -275,7 +275,7 @@ class BasketView(APIView):
             except ValueError:
                 return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
             else:
-                basket, _ = Order.objects.get_or_create(user_id=request.user.id, state='basket')
+                basket = Order.objects.get_or_create(user_id=request.user.id, state='basket')[0]
                 objects_updated = 0
                 print("*********", items_dict)
                 for order_item in items_dict:
