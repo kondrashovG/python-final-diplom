@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from orders.views import PartnerUpdate, LoginAccount, RegisterAccount, ProductInfoView
+from orders.views import PartnerUpdate, LoginAccount, RegisterAccount, ProductInfoView, BasketView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,4 +25,6 @@ urlpatterns = [
     path('user/login', LoginAccount.as_view(), name='user-login'),
     path('user/register', RegisterAccount.as_view(), name='user-register'),
     path('products', ProductInfoView.as_view(), name='shops'),
+    path('basket', BasketView.as_view(), name='basket'),
 ]
+
