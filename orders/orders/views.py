@@ -271,15 +271,12 @@ class BasketView(APIView):
         if items_sting:
             try:
                 items_dict = load_json(items_sting)
-                print("---------", items_dict, type(items_dict))
             except ValueError:
                 return JsonResponse({'Status': False, 'Errors': 'Неверный формат запроса'})
             else:
                 basket = Order.objects.get_or_create(user_id=request.user.id, state='basket')[0]
                 objects_updated = 0
-                print("*********", items_dict)
                 for order_item in items_dict:
-                    print("========", order_item, type(order_item['id']), type(order_item['quantity']))
                     if type(order_item['id']) == int and type(order_item['quantity']) == int:
                         objects_updated += OrderItem.objects.filter(order_id=basket.id, id=order_item['id']).update(
                             quantity=order_item['quantity'])
