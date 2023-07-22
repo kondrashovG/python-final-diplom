@@ -33,6 +33,7 @@ from orders.serializers import (
     ContactSerializer,
 )
 from orders.settings import MEDIA_ROOT
+from orders.signals import new_order
 
 
 class RegisterAccount(APIView):
@@ -288,7 +289,6 @@ class BasketView(APIView):
             )[0]
             query = Q()
             objects_deleted = False
-            print(items_list)
             for order_item_id in items_list:
                 if order_item_id.isdigit():
                     query = query | Q(order_id=basket.id, id=order_item_id)
@@ -411,7 +411,6 @@ class ContactView(APIView):
                 contact = Contact.objects.filter(
                     id=request.data["id"], user_id=request.user.id
                 ).first()
-                print(contact)
                 if contact:
                     serializer = ContactSerializer(
                         contact, data=request.data, partial=True
@@ -451,8 +450,6 @@ class OrderView(APIView):
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-        print("-------------", request.data)
-        print(request.data['id'], request.data['contact'], {'id', 'contact'}.issubset(request.data))
         if {'id', 'contact'}.issubset(request.data):
             if request.data['id'].isdigit():
                 try:
@@ -460,15 +457,34 @@ class OrderView(APIView):
                         user_id=request.user.id, id=request.data['id'], state='basket').update(
                         contact_id=request.data['contact'],
                         state='new')
-                    print(is_updated)
                 except IntegrityError as error:
-                    print(error)
                     return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
                 else:
                     if is_updated:
-                        # new_order.send(sender=self.__class__, user_id=request.user.id)
+                        new_order.send(sender=self.__class__, user_id=request.user.id)
                         return JsonResponse({'Status': True})
                     else:
                         return JsonResponse({'Status': False, 'Errors': 'Не найдена корзина'})
 
         return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+
+
+class PartnerOrders(APIView):
+    """
+    Класс для получения заказов поставщиками
+    """
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+
+        if request.user.type != 'shop':
+            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+
+        order = Order.objects.filter(
+            ordered_items__product_info__shop__user_id=request.user.id).exclude(state='basket').prefetch_related(
+            'ordered_items__product_info__product__category',
+            'ordered_items__product_info__product_parameters__parameter').select_related('contact').annotate(
+            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+
+        serializer = OrderSerializer(order, many=True)
+        return Response(serializer.data)
