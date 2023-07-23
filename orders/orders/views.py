@@ -33,7 +33,7 @@ from orders.serializers import (
     ContactSerializer,
 )
 from orders.settings import MEDIA_ROOT
-from orders.signals import new_order
+from orders.signals import new_order, new_order_to_shop, new_user_registered
 
 
 class RegisterAccount(APIView):
@@ -76,7 +76,7 @@ class RegisterAccount(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data["password"])
                     user.save()
-                    # new_user_registered.send(sender=self.__class__, user_id=user.id)
+                    new_user_registered.send(sender=self.__class__, user_id=user.id)
                     return JsonResponse({"Status": True})
                 else:
                     return JsonResponse(
@@ -430,18 +430,31 @@ class ContactView(APIView):
 
 class OrderView(APIView):
     """
-    Класс для получения и размешения заказов пользователями
+    Класс для получения и размещения заказов пользователями
     """
 
     # получить мои заказы
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-        order = Order.objects.filter(
-            user_id=request.user.id).exclude(state='basket').prefetch_related(
-            'ordered_items__product_info__product__category',
-            'ordered_items__product_info__product_parameters__parameter').select_related('contact').annotate(
-            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+            return JsonResponse(
+                {"Status": False, "Error": "Log in required"}, status=403
+            )
+        order = (
+            Order.objects.filter(user_id=request.user.id)
+            .exclude(state="basket")
+            .prefetch_related(
+                "ordered_items__product_info__product__category",
+                "ordered_items__product_info__product_parameters__parameter",
+            )
+            .select_related("contact")
+            .annotate(
+                total_sum=Sum(
+                    F("ordered_items__quantity")
+                    * F("ordered_items__product_info__price")
+                )
+            )
+            .distinct()
+        )
 
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
@@ -449,42 +462,121 @@ class OrderView(APIView):
     # разместить заказ из корзины
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
-        if {'id', 'contact'}.issubset(request.data):
-            if request.data['id'].isdigit():
+            return JsonResponse(
+                {"Status": False, "Error": "Log in required"}, status=403
+            )
+        if {"id", "contact"}.issubset(request.data):
+            if request.data["id"].isdigit():
                 try:
                     is_updated = Order.objects.filter(
-                        user_id=request.user.id, id=request.data['id'], state='basket').update(
-                        contact_id=request.data['contact'],
-                        state='new')
+                        user_id=request.user.id, id=request.data["id"], state="basket"
+                    ).update(contact_id=request.data["contact"], state="new")
                 except IntegrityError as error:
-                    return JsonResponse({'Status': False, 'Errors': 'Неправильно указаны аргументы'})
+                    return JsonResponse(
+                        {"Status": False, "Errors": "Неправильно указаны аргументы"}
+                    )
                 else:
                     if is_updated:
                         new_order.send(sender=self.__class__, user_id=request.user.id)
-                        return JsonResponse({'Status': True})
+                        return JsonResponse({"Status": True})
                     else:
-                        return JsonResponse({'Status': False, 'Errors': 'Не найдена корзина'})
+                        return JsonResponse(
+                            {"Status": False, "Errors": "Не найдена корзина"}
+                        )
 
-        return JsonResponse({'Status': False, 'Errors': 'Не указаны все необходимые аргументы'})
+        return JsonResponse(
+            {"Status": False, "Errors": "Не указаны все необходимые аргументы"}
+        )
 
 
 class PartnerOrders(APIView):
     """
     Класс для получения заказов поставщиками
     """
+
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return JsonResponse({'Status': False, 'Error': 'Log in required'}, status=403)
+            return JsonResponse(
+                {"Status": False, "Error": "Log in required"}, status=403
+            )
 
-        if request.user.type != 'shop':
-            return JsonResponse({'Status': False, 'Error': 'Только для магазинов'}, status=403)
+        if request.user.type != "shop":
+            return JsonResponse(
+                {"Status": False, "Error": "Только для магазинов"}, status=403
+            )
 
-        order = Order.objects.filter(
-            ordered_items__product_info__shop__user_id=request.user.id).exclude(state='basket').prefetch_related(
-            'ordered_items__product_info__product__category',
-            'ordered_items__product_info__product_parameters__parameter').select_related('contact').annotate(
-            total_sum=Sum(F('ordered_items__quantity') * F('ordered_items__product_info__price'))).distinct()
+        order = (
+            Order.objects.filter(
+                ordered_items__product_info__shop__user_id=request.user.id
+            )
+            .exclude(state="basket")
+            .prefetch_related(
+                "ordered_items__product_info__product__category",
+                "ordered_items__product_info__product_parameters__parameter",
+            )
+            .select_related("contact")
+            .annotate(
+                total_sum=Sum(
+                    F("ordered_items__quantity")
+                    * F("ordered_items__product_info__price")
+                )
+            )
+            .distinct()
+        )
 
         serializer = OrderSerializer(order, many=True)
         return Response(serializer.data)
+
+
+class OrderNewView(APIView):
+    """
+    Класс для рассылки заказов администраторам магазинов.
+    """
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse(
+                {"Status": False, "Error": "Log in required"}, status=403
+            )
+        if not request.user.is_staff:
+            return JsonResponse(
+                {"Status": False, "Error": "Только для администраторов системы"},
+                status=403,
+            )
+        if {"id"}.issubset(request.data):
+            if request.data["id"].isdigit():
+                try:
+                    is_updated = Order.objects.filter(
+                        id=request.data["id"], state="new"
+                    ).update(state="confirmed")
+                except IntegrityError as error:
+                    return JsonResponse(
+                        {"Status": False, "Errors": "Неправильно указаны аргументы"}
+                    )
+                else:
+                    if is_updated:
+                        print(is_updated)
+                        shops = set(
+                            [
+                                ProductInfo.objects.get(id=item.product_info_id).shop_id
+                                for item in OrderItem.objects.filter(
+                                    order_id=request.data["id"]
+                                )
+                            ]
+                        )
+                        print("=========", shops)
+                        for shop in shops:
+                            new_order_to_shop.send(
+                                sender=self.__class__,
+                                shop_id=shop,
+                                order_id=request.data["id"],
+                            )
+                        return JsonResponse({"Status": True})
+                    else:
+                        return JsonResponse(
+                            {"Status": False, "Errors": "Заказ не найден"}
+                        )
+
+        return JsonResponse(
+            {"Status": False, "Errors": "Не указаны все необходимые аргументы"}
+        )

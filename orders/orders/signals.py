@@ -3,7 +3,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.dispatch import receiver, Signal
 from django_rest_passwordreset.signals import reset_password_token_created
 
-from orders.models import ConfirmEmailToken, User
+from orders.models import ConfirmEmailToken, User, Shop
 
 new_user_registered = Signal(
     # providing_args=['user_id'],
@@ -12,6 +12,8 @@ new_user_registered = Signal(
 new_order = Signal(
     # providing_args=['user_id'],
 )
+
+new_order_to_shop = Signal()
 
 
 @receiver(reset_password_token_created)
@@ -74,6 +76,27 @@ def new_order_signal(user_id, **kwargs):
         f"Обновление статуса заказа",
         # message:
         "Заказ сформирован",
+        # from:
+        settings.EMAIL_HOST_USER,
+        # to:
+        [user.email],
+    )
+    msg.send()
+
+
+@receiver(new_order_to_shop)
+def new_order_to_shop_signal(shop_id, order_id, **kwargs):
+    """
+    Отправляем письмо администратору магазина при обработке нового заказа
+    """
+    # send an e-mail to the user
+    user = User.objects.get(id=Shop.objects.get(id=shop_id).user_id)
+
+    msg = EmailMultiAlternatives(
+        # title:
+        f"Обновление статуса заказа № {order_id}",
+        # message:
+        "Заказ поступил в обработку",
         # from:
         settings.EMAIL_HOST_USER,
         # to:

@@ -26,6 +26,7 @@ from orders.views import (
     ContactView,
     OrderView,
     PartnerOrders,
+    OrderNewView,
 )
 
 urlpatterns = [
@@ -38,4 +39,5 @@ urlpatterns = [
     path("user/contact", ContactView.as_view(), name="user-contact"),
     path("order", OrderView.as_view(), name="order"),
     path("partner/orders", PartnerOrders.as_view(), name="partner-orders"),
+    path("order/new", OrderNewView.as_view(), name="order-new"),
 ]
