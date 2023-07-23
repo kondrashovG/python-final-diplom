@@ -135,7 +135,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 EMAIL_HOST = 'smtp.mail.ru'
 EMAIL_HOST_USER = 'kondrashovg@mail.ru'
-EMAIL_HOST_PASSWORD = 'byuU7scSfUqpgJngHPqq'
+EMAIL_HOST_PASSWORD = 'your_know'
 EMAIL_PORT = '465'
 EMAIL_USE_SSL = True
 SERVER_EMAIL = EMAIL_HOST_USER
